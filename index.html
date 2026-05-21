@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>股票分析助手</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0c0e12;
+    --surface: #13161c;
+    --surface2: #1a1e27;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --accent: #e8d5a3;
+    --accent2: #c9a96e;
+    --text: #e8e6e0;
+    --muted: #7a7872;
+    --muted2: #9a9890;
+    --green: #4ade80;
+    --red: #f87171;
+    --tag-bg: rgba(232,213,163,0.08);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* Grid bg pattern */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  /* Header */
+  header {
+    padding: 56px 0 40px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 40px;
+  }
+
+  .logo-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .logo-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent2);
+    animation: pulse 2.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  h1 {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    margin-left: 20px;
+    letter-spacing: 0.04em;
+  }
+
+  /* Config section */
+  .config-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  .config-card summary {
+    cursor: pointer;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    user-select: none;
+  }
+
+  .config-card summary::before {
+    content: '▸';
+    transition: transform 0.2s;
+    font-size: 10px;
+  }
+
+  details[open] summary::before { transform: rotate(90deg); }
+
+  .config-inner {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  label {
+    font-size: 12px;
+    color: var(--muted2);
+    display: block;
+    margin-bottom: 5px;
+    letter-spacing: 0.04em;
+  }
+
+  input[type="text"], input[type="password"], select, textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent2);
+  }
+
+  select { cursor: pointer; }
+
+  select option { background: #1a1e27; }
+
+  /* Main input area */
+  .input-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+
+  .input-label {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .stock-input-wrap {
+    position: relative;
+  }
+
+  #stockInput {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  #stockInput:focus {
+    border-color: var(--accent2);
+    box-shadow: 0 0 0 3px rgba(201,169,110,0.12);
+  }
+
+  #stockInput::placeholder { color: var(--muted); }
+
+  .hints {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .hint-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: var(--tag-bg);
+    border: 1px solid rgba(232,213,163,0.15);
+    color: var(--accent2);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .hint-tag:hover {
+    background: rgba(232,213,163,0.15);
+    border-color: rgba(232,213,163,0.3);
+  }
+
+  .analyze-btn {
+    margin-top: 20px;
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    color: #0c0e12;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 500;
+    font-family: 'Noto Serif SC', serif;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s, opacity 0.2s;
+    letter-spacing: 0.04em;
+  }
+
+  .analyze-btn:hover:not(:disabled) { background: #f0e0b0; }
+  .analyze-btn:active:not(:disabled) { transform: scale(0.99); }
+  .analyze-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  /* Status */
+  .status-bar {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: var(--muted2);
+  }
+
+  .status-bar.visible { display: flex; }
+
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Result area */
+  .result-container { display: none; }
+  .result-container.visible { display: block; }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .result-meta {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.04em;
+  }
+
+  .copy-btn {
+    font-size: 12px;
+    padding: 5px 14px;
+    border-radius: 6px;
+    background: transparent;
+    border: 1px solid var(--border2);
+    color: var(--muted2);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .copy-btn:hover { border-color: var(--accent2); color: var(--accent); }
+
+  /* Stock cards */
+  .stock-result {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+
+  .stock-result-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .stock-code {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--accent2);
+    letter-spacing: 0.06em;
+  }
+
+  .stock-name {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 17px;
+    color: var(--text);
+    margin-top: 2px;
+  }
+
+  .signal-badge {
+    font-size: 12px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+  }
+
+  .signal-buy { background: rgba(74,222,128,0.1); color: var(--green); border: 1px solid rgba(74,222,128,0.25); }
+  .signal-sell { background: rgba(248,113,113,0.1); color: var(--red); border: 1px solid rgba(248,113,113,0.25); }
+  .signal-hold { background: rgba(232,213,163,0.08); color: var(--accent2); border: 1px solid rgba(232,213,163,0.2); }
+  .signal-watch { background: rgba(122,120,114,0.1); color: var(--muted2); border: 1px solid var(--border2); }
+
+  .stock-result-body {
+    padding: 20px 24px;
+  }
+
+  .analysis-section {
+    margin-bottom: 16px;
+  }
+
+  .section-title {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .analysis-text {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.75;
+  }
+
+  .key-points {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .key-point {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 13.5px;
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  .key-point::before {
+    content: '—';
+    color: var(--accent2);
+    flex-shrink: 0;
+    margin-top: 1px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 16px 0;
+  }
+
+  .risk-level {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted2);
+  }
+
+  .risk-dots {
+    display: flex;
+    gap: 3px;
+  }
+
+  .risk-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--border2);
+  }
+
+  .risk-dot.on { background: var(--accent2); }
+
+  /* Error */
+  .error-card {
+    display: none;
+    background: rgba(248,113,113,0.05);
+    border: 1px solid rgba(248,113,113,0.2);
+    border-radius: 10px;
+    padding: 16px 20px;
+    color: var(--red);
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+
+  .error-card.visible { display: block; }
+
+  /* Footer */
+  footer {
+    margin-top: 60px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    letter-spacing: 0.04em;
+    line-height: 1.8;
+  }
+
+  /* Streaming cursor */
+  .stream-cursor::after {
+    content: '▋';
+    animation: blink 1s step-end infinite;
+    color: var(--accent2);
+    font-size: 12px;
+  }
+
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    h1 { font-size: 22px; }
+    .stock-result-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo-row">
+      <div class="logo-dot"></div>
+      <h1>股票分析助手</h1>
+    </div>
+    <div class="subtitle">AI · 实时分析 · 仅供参考，非投资建议</div>
+  </header>
+
+  <!-- API 配置 -->
+  <details class="config-card" id="configSection">
+    <summary>接口配置</summary>
+    <div class="config-inner">
+      <div>
+        <label>AI 接口地址</label>
+        <input type="text" id="apiBase" value="https://api.deepseek.com/v1/chat/completions" placeholder="https://api.deepseek.com/v1/chat/completions">
+      </div>
+      <div>
+        <label>API Key</label>
+        <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off">
+      </div>
+      <div>
+        <label>模型</label>
+        <input type="text" id="apiModel" value="deepseek-chat" placeholder="deepseek-chat / deepseek-reasoner">
+      </div>
+    </div>
+  </details>
+
+  <!-- 股票输入 -->
+  <div class="input-card">
+    <div class="input-label">输入股票代码</div>
+    <div class="stock-input-wrap">
+      <input type="text" id="stockInput"
+        placeholder="如：600519, AAPL, hk00700，多个用逗号分隔"
+        autocomplete="off" spellcheck="false">
+    </div>
+    <div class="hints">
+      <span class="hint-tag" onclick="addHint('600519')">贵州茅台</span>
+      <span class="hint-tag" onclick="addHint('000858')">五 粮 液</span>
+      <span class="hint-tag" onclick="addHint('300750')">宁德时代</span>
+      <span class="hint-tag" onclick="addHint('hk00700')">腾讯控股</span>
+      <span class="hint-tag" onclick="addHint('AAPL')">苹果</span>
+      <span class="hint-tag" onclick="addHint('TSLA')">特斯拉</span>
+      <span class="hint-tag" onclick="addHint('NVDA')">英伟达</span>
+    </div>
+    <button class="analyze-btn" id="analyzeBtn" onclick="startAnalysis()">开始分析</button>
+  </div>
+
+  <!-- 状态条 -->
+  <div class="status-bar" id="statusBar">
+    <div class="spinner"></div>
+    <span id="statusText">正在分析，请稍候…</span>
+  </div>
+
+  <!-- 错误 -->
+  <div class="error-card" id="errorCard"></div>
+
+  <!-- 结果 -->
+  <div class="result-container" id="resultContainer">
+    <div class="result-header">
+      <div class="result-meta" id="resultMeta"></div>
+      <button class="copy-btn" onclick="copyAll()">复制全文</button>
+    </div>
+    <div id="resultBody"></div>
+  </div>
+
+  <footer>
+    本工具仅供学习参考，不构成任何投资建议<br>
+    数据来源于 AI 分析，请以实际行情为准
+  </footer>
+
+</div>
+
+<script>
+function addHint(code) {
+  const input = document.getElementById('stockInput');
+  const cur = input.value.trim();
+  if (!cur) { input.value = code; return; }
+  const codes = cur.split(',').map(s => s.trim()).filter(Boolean);
+  if (!codes.includes(code)) codes.push(code);
+  input.value = codes.join(', ');
+}
+
+function setStatus(msg) {
+  document.getElementById('statusText').textContent = msg;
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorCard');
+  el.textContent = '⚠ ' + msg;
+  el.classList.add('visible');
+}
+
+function hideError() {
+  document.getElementById('errorCard').classList.remove('visible');
+}
+
+function inferMarket(code) {
+  code = code.trim().toUpperCase();
+  if (/^HK\d/.test(code) || /^\d{5}$/.test(code)) return '港股(HK)';
+  if (/^[A-Z]{1,5}$/.test(code)) return '美股(US)';
+  if (/^(60|68)\d{4}$/.test(code)) return 'A股上交所';
+  if (/^(00|30|002)\d/.test(code)) return 'A股深交所';
+  return 'A/H/美股';
+}
+
+function getRiskDots(level) {
+  const levels = { low: 1, medium: 2, high: 3, '低': 1, '中': 2, '高': 3 };
+  const n = levels[level] || 2;
+  return `<div class="risk-dots">${[1,2,3].map(i => `<div class="risk-dot${i<=n?' on':''}"></div>`).join('')}</div>`;
+}
+
+function getSignalClass(signal) {
+  const s = (signal||'').toLowerCase();
+  if (s.includes('买') || s.includes('buy')) return 'signal-buy';
+  if (s.includes('卖') || s.includes('sell')) return 'signal-sell';
+  if (s.includes('持') || s.includes('hold')) return 'signal-hold';
+  return 'signal-watch';
+}
+
+let allResultsText = '';
+
+async function startAnalysis() {
+  hideError();
+  const apiBase  = document.getElementById('apiBase').value.trim();
+  const apiKey   = document.getElementById('apiKey').value.trim();
+  const apiModel = document.getElementById('apiModel').value.trim() || 'deepseek-chat';
+  const rawInput = document.getElementById('stockInput').value.trim();
+
+  if (!apiKey) {
+    // 展开配置区
+    document.getElementById('configSection').setAttribute('open', '');
+    showError('请先在"接口配置"中填写 API Key');
+    return;
+  }
+  if (!rawInput) { showError('请输入至少一个股票代码'); return; }
+
+  const stocks = rawInput.split(/[,，\s]+/).map(s => s.trim()).filter(Boolean);
+
+  document.getElementById('analyzeBtn').disabled = true;
+  document.getElementById('statusBar').classList.add('visible');
+  document.getElementById('resultContainer').classList.remove('visible');
+  document.getElementById('resultBody').innerHTML = '';
+  allResultsText = '';
+
+  const now = new Date();
+  document.getElementById('resultMeta').textContent =
+    `${now.toLocaleDateString('zh-CN')} ${now.toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'})} · ${stocks.length} 支股票`;
+
+  const prompt = buildPrompt(stocks);
+
+  try {
+    setStatus(`正在调用 ${apiModel}，分析 ${stocks.join('、')} …`);
+
+    const resp = await fetch(apiBase, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: apiModel,
+        stream: true,
+        max_tokens: 4096,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: prompt }
+        ]
+      })
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error?.message || `HTTP ${resp.status}`);
+    }
+
+    document.getElementById('statusBar').classList.remove('visible');
+    document.getElementById('resultContainer').classList.add('visible');
+
+    await streamResponse(resp, stocks);
+
+  } catch(e) {
+    document.getElementById('statusBar').classList.remove('visible');
+    showError(e.message || '请求失败，请检查网络和 API Key');
+  } finally {
+    document.getElementById('analyzeBtn').disabled = false;
+  }
+}
+
+async function streamResponse(resp, stocks) {
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let fullText = '';
+  let rendered = false;
+
+  // 先渲染占位骨架
+  const body = document.getElementById('resultBody');
+  body.innerHTML = stocks.map(code => `
+    <div class="stock-result" id="card-${sanitize(code)}">
+      <div class="stock-result-header">
+        <div>
+          <div class="stock-code">${code.toUpperCase()}</div>
+          <div class="stock-name" id="name-${sanitize(code)}">加载中…</div>
+        </div>
+        <div id="badge-${sanitize(code)}"></div>
+      </div>
+      <div class="stock-result-body" id="body-${sanitize(code)}">
+        <div class="analysis-text stream-cursor" id="stream-${sanitize(code)}"></div>
+      </div>
+    </div>
+  `).join('');
+
+  // 流式读取
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const data = line.slice(6).trim();
+      if (data === '[DONE]') continue;
+      try {
+        const json = JSON.parse(data);
+        const delta = json.choices?.[0]?.delta?.content || '';
+        fullText += delta;
+      } catch {}
+    }
+  }
+
+  allResultsText = fullText;
+
+  // 解析 JSON 并渲染
+  let parsed;
+  try {
+    const clean = fullText.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    parsed = JSON.parse(clean);
+  } catch {
+    // fallback: 直接显示原文
+    body.innerHTML = `<div class="stock-result"><div class="stock-result-body"><div class="analysis-text">${escapeHtml(fullText)}</div></div></div>`;
+    return;
+  }
+
+  // 渲染每支股票
+  const results = Array.isArray(parsed) ? parsed : [parsed];
+  body.innerHTML = '';
+  results.forEach(item => renderStockCard(item, body));
+}
+
+function renderStockCard(item, container) {
+  const signalClass = getSignalClass(item.signal || item.建议 || '');
+  const signal = item.signal || item.建议 || '观望';
+  const name = item.name || item.股票名称 || item.code || '';
+  const code = item.code || item.股票代码 || '';
+  const summary = item.summary || item.综合评估 || '';
+  const points = item.key_points || item.关键要点 || [];
+  const risk = item.risk || item.风险等级 || 'medium';
+  const target = item.target_price || item.目标价 || '';
+  const catalysts = item.catalysts || item.催化剂 || [];
+  const risks = item.risks || item.主要风险 || [];
+
+  const riskLabel = { low: '低风险', medium: '中风险', high: '高风险',
+    '低': '低风险', '中': '中风险', '高': '高风险' }[risk] || '中风险';
+
+  const card = document.createElement('div');
+  card.className = 'stock-result';
+  card.innerHTML = `
+    <div class="stock-result-header">
+      <div>
+        <div class="stock-code">${escapeHtml(code)}</div>
+        <div class="stock-name">${escapeHtml(name)}</div>
+      </div>
+      <div class="signal-badge ${signalClass}">${escapeHtml(signal)}</div>
+    </div>
+    <div class="stock-result-body">
+      ${summary ? `
+      <div class="analysis-section">
+        <div class="section-title">综合评估</div>
+        <div class="analysis-text">${escapeHtml(summary)}</div>
+      </div>` : ''}
+
+      ${points.length ? `
+      <div class="analysis-section">
+        <div class="section-title">核心要点</div>
+        <div class="key-points">${points.map(p => `<div class="key-point">${escapeHtml(p)}</div>`).join('')}</div>
+      </div>` : ''}
+
+      ${(catalysts.length || risks.length) ? `<div class="divider"></div>` : ''}
+
+      ${catalysts.length ? `
+      <div class="analysis-section">
+        <div class="section-title">上行催化剂</div>
+        <div class="key-points">${catalysts.map(p => `<div class="key-point">${escapeHtml(p)}</div>`).join('')}</div>
+      </div>` : ''}
+
+      ${risks.length ? `
+      <div class="analysis-section">
+        <div class="section-title">主要风险</div>
+        <div class="key-points">${risks.map(p => `<div class="key-point">${escapeHtml(p)}</div>`).join('')}</div>
+      </div>` : ''}
+
+      <div class="divider"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div class="risk-level">
+          风险评级 ${getRiskDots(risk)}
+          <span style="margin-left:4px">${riskLabel}</span>
+        </div>
+        ${target ? `<div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--accent2)">目标价：${escapeHtml(String(target))}</div>` : ''}
+      </div>
+    </div>
+  `;
+  container.appendChild(card);
+}
+
+function buildPrompt(stocks) {
+  return `请对以下股票代码逐一进行基本面与技术面综合分析：${stocks.join(', ')}
+
+请以 JSON 数组格式输出，每支股票一个对象，包含以下字段：
+- code: 股票代码
+- name: 股票中文名称
+- signal: 操作建议（买入 / 持有 / 减仓 / 观望 / 卖出）
+- summary: 2-3句综合评估
+- key_points: 3-5条核心要点（数组）
+- catalysts: 2-3条上行催化剂（数组）
+- risks: 2-3条主要风险（数组）
+- risk: 风险等级（低/中/高）
+- target_price: 参考目标价（字符串，含货币符号，如无把握可省略）
+
+仅输出 JSON，不要输出任何其他文字或 markdown 代码块标记。`;
+}
+
+const SYSTEM_PROMPT = `你是一位资深股票分析师，熟悉A股、港股、美股市场。
+分析时结合行业趋势、估值、技术形态、宏观环境，给出客观专业的判断。
+注意：所有分析仅供参考，不构成投资建议。
+回复格式严格遵循用户要求的 JSON，字段完整，语言简洁。`;
+
+function copyAll() {
+  if (!allResultsText) return;
+  navigator.clipboard.writeText(allResultsText).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '已复制';
+    setTimeout(() => btn.textContent = '复制全文', 2000);
+  });
+}
+
+function sanitize(s) { return s.replace(/[^a-zA-Z0-9]/g, '_'); }
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Enter 触发
+document.getElementById('stockInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startAnalysis();
+});
+
+// 首次打开自动展开配置（Key 未填时）
+window.addEventListener('load', () => {
+  if (!document.getElementById('apiKey').value) {
+    document.getElementById('configSection').setAttribute('open', '');
+  }
+});
+</script>
+</body>
+</html>
